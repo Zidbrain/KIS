@@ -127,7 +127,7 @@ DPareto<-function(X,Y){
 NewW<-data.frame()
 for (i in c(1:length(rownames(data))))
 {
-  if (data[i, 7] == "yes" & data[i, 4] >= 100 & data[i, 2] <= 3600 & data[i, 6] >= 15)
+  if (data[i, 7] == "yes" & data[i, 4] >= 100 & data[i, 2] <= 3600 & data[i, 6] >= 15 & data[i, 8] == 'yes')
     NewW<-rbind(NewW,data[i,])
 }
 View(NewW)
@@ -148,3 +148,22 @@ for (i in c(1:length(rownames(WW)))){
   if (p) result<-c(result, rownames(WW)[i])
 }
 result
+
+ideal<-data.frame(0, speed, ram, hd)
+ideal
+
+distance<-function(A, B){
+  return(sqrt(sum((A-B)^2)))}
+
+colMax <- function(data) sapply(data, max, na.rm = TRUE)
+
+for (i in 1:4) {
+  print(paste("Max in C",  i, ": "))
+  results <- data.frame()
+  rownames(results) <- rownames(c("index", "distances"))
+  for (j in result) {
+    results <- rbind(results, c(j, distance(ideal[1, ], WW[j, ])))
+  }
+  max_result <- colMax(results)
+  print(paste(max_result$index, " - ", max_result$distance))
+}
