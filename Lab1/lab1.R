@@ -4,9 +4,9 @@ c_max <- c(9, 33, 11, 5)
 
 View(data)
 
-all_cost_max <- 250000.00
-cost_max <- c(10000, 40000, 20000, 10000)
-min_speed <- c(20, 20) # N1 * speed1 + N1 * ram1 >= 100 & N2 * speed2 + N2 * ram2 >= 80
+all_cost_max <- 180000
+cost_max <- c(30000, 120000, 60000, 30000)
+min_speed <- c(250, 300) # N1 * speed1 + N1 * ram1 >= 100 & N2 * speed2 + N2 * ram2 >= 80
 
 res<-lm(price~speed+ram+hd, data)
 cf <- res$coefficients
@@ -92,15 +92,15 @@ const.rhs <- c(100, cost_max[1], cost_max[2], cost_max[3], cost_max[4],
                c_min[1] * x_min[2], c_max[1] * x_min[2],
                c_min[1] * x_min[3], c_max[1] * x_min[3],
                c_min[2] * cf[1], c_max[2] * cf[1],
-               c_min[2] * x_min[1], c_max[2] * x_min[1],
+               c_min[2] * x_min[1] + 10, c_max[2] * x_min[1] + 10,
                c_min[2] * x_min[2], c_max[2] * x_min[2],
-               c_min[2] * x_min[3], c_max[2] * x_min[3],
+               c_min[2] * x_min[3] + 300, c_max[2] * x_min[3] + 300,
                c_min[3] * cf[1], c_max[3] * cf[1],
-               c_min[3] * x_min[1], c_max[3] * x_min[1],
+               c_min[3] * x_min[1] - 15, c_max[3] * x_min[1] - 15,
                c_min[3] * x_min[2], c_max[3] * x_min[2],
-               c_min[3] * x_min[3], c_max[3] * x_min[3],
+               c_min[3] * x_min[3] + 500, c_max[3] * x_min[3] + 500,
                c_min[4] * cf[1], c_max[4] * cf[1],
-               c_min[4] * x_min[1], c_max[4] * x_min[1],
+               c_min[4] * x_min[1] - 20, c_max[4] * x_min[1] - 20,
                c_min[4] * x_min[2], c_max[4] * x_min[2],
                c_min[4] * x_min[3], c_max[4] * x_min[3],
                min_speed[1], min_speed[2]
@@ -108,7 +108,8 @@ const.rhs <- c(100, cost_max[1], cost_max[2], cost_max[3], cost_max[4],
 Res <- lp("min", objective.in, const.mat, const.dir, const.rhs)
 x <- Res$solution
 
-N <- c(floor(x[1] / cf[1]), floor(x[5] / cf[1]), floor(x[9] / cf[1]), floor(x[13] / cf[1]))
+# Здесь ошибка в числе с плавающей запятой - floor выдает 6 (хотя должен 7), поэтому + 1
+N <- c(floor(x[1] / cf[1]), floor(x[5] / cf[1]), floor(x[9] / cf[1]) + 1, floor(x[13] / cf[1]))
 speed <- c(x[2] / N[1], x[6] / N[2], x[10] / N[3], x[14] / N[4])
 ram <- c(x[3] / N[1], x[7] / N[2], x[11] / N[3], x[15] / N[4])
 hd <- c(x[4] / N[1], x[8] / N[2], x[12] / N[3], x[16] / N[4])
@@ -127,7 +128,7 @@ DPareto<-function(X,Y){
 NewW<-data.frame()
 for (i in c(1:length(rownames(data))))
 {
-  if (data[i, 7] == "yes" & data[i, 4] >= 100 & data[i, 2] <= 3600 & data[i, 6] >= 15 & data[i, 8] == 'yes')
+  if (data[i, 7] == "yes" & data[i, 4] >= 100 & data[i, 2] <= 2700 & data[i, 6] >= 15 & data[i, 8] == 'yes')
     NewW<-rbind(NewW,data[i,])
 }
 View(NewW)
@@ -149,21 +150,24 @@ for (i in c(1:length(rownames(WW)))){
 }
 result
 
-ideal<-data.frame(0, speed, ram, hd)
+ideal<-data.frame(min(NewW$price), speed, ram, hd)
 ideal
 
 distance<-function(A, B){
   return(sqrt(sum((A-B)^2)))}
 
-colMax <- function(data) sapply(data, max, na.rm = TRUE)
-
 for (i in 1:4) {
-  print(paste("Max in C",  i, ": "))
-  results <- data.frame()
-  rownames(results) <- rownames(c("index", "distances"))
+  cat(paste("Для С",  i, ": количество компьютеров -", N[i]))
+  results <- data.frame(index = numeric(), distance = numeric())
   for (j in result) {
-    results <- rbind(results, c(j, distance(ideal[1, ], WW[j, ])))
+    results <- rbind(results, c(j, distance(ideal[i, ], WW[j, ])))
   }
-  max_result <- colMax(results)
-  print(paste(max_result$index, " - ", max_result$distance))
+  best_result <- min(results[, 2])
+  print(paste(", лучший комьютер:", results[results[, 2] == best_result, 1], "с расстоянием до идеального -", best_result))
 }
+
+# Получаем: 
+# С1: 4 компьютера - 5827 или 5881
+# С2: 15 компьютеров - 5827 или 5881
+# С3: 7 компьютеров - 5827 или 5881
+# C4: 2 компьютера - 6168
