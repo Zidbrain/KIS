@@ -66,4 +66,4 @@ sd <- sqrt(D)
 k <- sd / M * 100
 res <- rbind(res, c(M, D, sd, k))
 
-rownames(res) <- c("theory", "actual", "generating function")
+rownames(res) <- c("theory", "experiment", "generating function")
