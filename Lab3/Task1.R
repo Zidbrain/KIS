@@ -42,11 +42,7 @@ for (i in 1:n) {
   }
 }
 
-for (i in 1:4) {
-  for (j in 1:3) {
-   resultExperiment[j, i] <- resultExperiment[j, i] / n 
-  }
-}
+resultExperiment <- resultExperiment / n
 rownames(resultExperiment) <- c("k - 2", "k - 1", "k")
 
 resultTheory <- data.frame(p1 = c(0,0,0), p2 = c(0,0,0), p3 = c(0,0,0), p4 = c(0,0,0))
