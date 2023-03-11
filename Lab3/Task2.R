@@ -4,6 +4,7 @@ k<-sample(c(10:25),1)
 t1<-sample(c(14:20),1)
 t2<-sample(c(2:5),1)
 
+# k = 2, иначе a > u, задача неразрешима
 k <- 2
 a1 <- t1^-1
 a2 <- t2^-1
@@ -14,7 +15,7 @@ results <- data.frame(theory = numeric(3), experiment = numeric(3))
 rownames(results) <- c("Вероятность что программа не будет выполнена сразу",
                        "Среднее время ожидания до реализации",
                        "Среднее количество программ ожидающих реализации")
-results[, 1] = c(p, p^2/(k * a1*(1-p)) + t2, p^2/(1-p))
+results[, 1] = c(p, 1/(a2*(1-p)), p^2/(1-p))
 
 events <- matrix(nrow = 3)
 events <- events[, -1]
