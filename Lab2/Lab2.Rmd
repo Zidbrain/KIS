@@ -1,0 +1,362 @@
+---
+title: "Лабораторная работа №2"
+output: html_notebook
+---
+
+# Задание 1
+
+Заданы три независимые целочисленные неотрицательные случайные величины $X_1,X_2,X_3$, необходимо найти математическое ожидание, дисперсию, среднее квадратическое отклонение и коэффициент вариации случайной величины $X_1+X_2+X_3$ численно и теоретически (из определения и с использованием производящей функции).
+
+## Теория
+
+Математическое ожидание, дисперсия, среднее квадратическое отклонение и коэффициент вариации суммы **независимых** случайных велечин: $$
+\mu = M[\sum_i{X_i}] = \sum_i{M[X_i]}\\
+\sigma^2 = D[\sum_i{X_i}] = \sum_i{D[X_i]}\\
+\sigma=\sqrt{D[X]}\\
+CV=\frac{\sigma}{\mu}
+$$ Из лекции 2 - **производящей функцией распределения случайной величины** называется: $$
+P_\zeta(z)=\sum_{n=0}^{\infty}p_nz^n
+$$ **Некоторые свойства производящей функции**:
+
+1.  $$M(\zeta)=P_\zeta^{'}(z)|_{z=1}$$
+2.  $$D(\zeta)=P_\zeta^{''}(z)|_{z=1}+P_\zeta^{'}(z)|_{z=1}-(P_\zeta^{'}(z))^2|_{z=1}$$
+
+### Данные варианта
+
+```{r}
+Variant<-12
+set.seed(Variant) 
+X1<-sample(c(1:20),5)
+X2<-sample(c(3:100),5)
+X3<-sample(c(0:40),5)
+pp1<-runif(5)
+p1<-pp1/sum(pp1)
+pp2<-runif(5)
+p2<-pp2/sum(pp2)
+pp3<-runif(5)
+p3<-pp3/sum(pp3)
+```
+
+### Рассчитаем теоретические значения по определению
+
+```{r}
+M_T <- function(X, P) { return(sum(X * P)) }
+D_T <- function(X, P) { M <- M_T(X, P); return(sum(P * (X - M)^2)) }
+
+M <- M_T(X1, p1) + M_T(X2, p2) + M_T(X3, p3)
+D <- D_T(X1, p1) + D_T(X2, p2) + D_T(X3, p3)
+sd <- sqrt(D)
+k <- sd / M * 100
+
+res <- data.frame(M, D, sd, k)
+res
+```
+
+### Рассчитаем теоретические значения с помощью производящей функции
+
+```{r}
+#install.packages("polynom")
+library(polynom)
+pgf <- function(X, P) {
+  res <- sample(0, max(X) + 1, replace = TRUE)
+  for (i in 1:length(P)) {
+    res[X[i] + 1] <- P[i]
+  }
+  return(polynomial(coef = res))
+}
+
+pgf_X = pgf(X1, p1) * pgf(X2, p2) * pgf(X3, p3)
+
+M <- as.function(deriv(pgf_X))(1)
+D <- as.function(deriv(deriv(pgf_X)))(1) + M - M^2
+sd <- sqrt(D)
+k <- sd / M * 100
+
+res <- rbind(res, c(M, D, sd, k))
+rownames(res) <- c("theory", "generating function")
+res
+```
+
+## Численный расчет
+
+```{r}
+getValue <- function(X, P) {
+  y <- runif(1)
+  sum <- 0
+  res <- 0
+  for (i in 1:length(P)) {
+    sum <- sum + P[i]
+    if (y <= sum) {
+      res <- X[i]
+      break
+    }
+  }
+  return(res)
+}
+
+actual <- c()
+for (i in 1:100000) {
+  actual <- c(actual, getValue(X1, p1) + getValue(X2, p2) + getValue(X3, p3))
+}
+
+M <- mean(actual)
+sd <- sd(actual)
+D <- sd^2
+k <- sd / M * 100
+res <- rbind(res, c(M, D, sd, k))
+rownames(res) <- c("theory", "generating function", "experiment")
+res
+```
+
+# Задание 2
+
+Заданы три независимые целочисленные неотрицательные случайные величины $X_1,X_2,X_3$, распределенные по закону Пуассона, необходимо найти математическое ожидание, дисперсию, среднее квадратическое отклонение и коэффициент вариации случайной величины $X_1+X_2+X_3$ численно и теоретически. Параметры закона Пуассона для $X_1,X_2,X_3$ определить в соответствии с вариантом.
+
+## Теория
+
+Из [задания 1](#задание-1):
+$$
+\mu = M[\sum_i{X_i}] = \sum_i{M[X_i]}\\
+\sigma^2 = D[\sum_i{X_i}] = \sum_i{D[X_i]}
+$$
+
+### Данные варианта
+```{r}
+Variant <- 12
+set.seed(Variant)
+a <- runif(3)
+```
+
+Примем, что $\tau=1$
+
+### Теоретический расчет
+```{r}
+M <- sum(a)
+D <- sum(a)
+sd <- sqrt(D)
+k <- sd / M
+
+res <- data.frame(M, D, sd, k)
+res
+```
+
+## Численный расчет
+
+```{r}
+n <- 10000
+X <- rpois(n, a[1]) + rpois(n, a[2]) + rpois(n, a[3])
+M <- mean(X)
+sd <- sd(X)
+res <- rbind(res, c(M, sd^2, sd, sd / M))
+rownames(res) <- c("theory", "experiment")
+res
+```
+
+# Задание 3
+
+Обработка сообщения в специализированной ВС осуществляется $K$ последовательными программами. Длительность работы каждой программы представляет собой случайную величину, распределенную экспоненциально со средним значением $T=\frac{1}{\lambda}$.
+Найти преобразование Лапласа-Стилтьеса распределения длительности обработки сообщения в ВС, его математическое ожидание и дисперсию. Также построить модель и провести численный расчет.
+
+## Теория
+
+Длительность обработки сообщения в ВС представляет собой сумму $K$ случайных велечин, обозначим её $Z$
+
+Из [лекции 2](https://github.com/junaart/ForStudents/blob/master/KIS/Lection_2/Lection_2.ipynb) по свойству 9:
+Если две независимые случайные величины $\zeta_1,\zeta_2$ имеют функции преобразования Лапласа-Стилтьеса $\beta_1(s),\beta_2(s)$, 
+то случайная величина $\zeta_1+\zeta_2$ имеет преобразование Лапласа-Стилтьеса $\beta_1(s)\cdot\beta_2(s)$
+
+Функция распределения экспоненциального распределения имеет вид:
+$$
+F\{X < x\} = 1 - e^{-ax}
+$$
+Тогда преобразование Лапласа-Стилтьеса экпоненциального распределения имеет вид:
+$$
+\mathcal{B}(F(t)) = \beta(s) = \int_0^\infty{e^{-st}dF(t)} = \int_0^\infty{e^{-st}\lambda e^{-\lambda t}dt} =
+\lambda\int_0^\infty{e^{-(\lambda+s)t}dt} = \lambda\left.\left[-\frac{e^{-(\lambda+s)t}}{\lambda+s}\right]\right|_{t=0}^\infty =
+\lambda\left[0+\frac{1}{\lambda+s}\right] = \frac{\lambda}{\lambda+s}
+$$
+
+Преобразование Лапласа-Стилтьеса суммы $K$ случайных величин, распределенных по экпоненциальному закону:
+$$
+\mathcal{B}(Z) =\mathcal{B}(\sum_{i=1}^KF_i(t)) = \prod_{i=1}^K\mathcal{B}(F_i(t)) = (\beta(s))^k = \frac{\lambda^K}{(\lambda+s)^K} =
+\lambda^K(\lambda+s)^{-K}
+$$
+
+По свойству 8, если $\beta(s)$ - преобразование Лалпаса-Стилтьеса случайной велечины $\zeta$, то:
+$$
+M(\zeta) = -\beta^{'}(0)\\
+D(\zeta) = \beta^{''}(0) - (\beta^{'}(0))^2
+$$
+
+Следовательно:
+$$
+M(Z) = -\beta^{'}(s)|_{s=0} = \left[\lambda^KK(\lambda+s)^{-K-1}\right]_{s=0}=\frac{K\lambda^K}{\lambda^{K+1}} = \frac{K}{\lambda}\\
+D(Z) = \beta^{''}(0) - (\beta^{'}(0))^2 = \left[-\lambda^KK(K+1)(\lambda+s)^{-K-2}\right]_{s=0} - M(Z)^2 = -\frac{(K^2+K)\lambda^K}{\lambda^{K+2}} - \frac{K^2}{\lambda^2} = -\frac{K^2+K - K^2}{\lambda^2} = \frac{K}{\lambda^2}
+$$
+
+### Данные варианта
+
+```{r}
+Variant<-12
+set.seed(Variant)
+alpha<-runif(7)[7]
+alpha
+```
+
+### Теоретический расчет
+
+```{r}
+k <- 10
+M <- k / alpha
+D <- k / alpha^2
+
+res <- data.frame(M, D)
+res
+```
+
+## Численный расчет
+
+```{r}
+n <- 100000
+X <- 0
+for (i in 1:k) { X <- X + rexp(n, rate=alpha) }
+
+M <- mean(X)
+D <- sd(X)^2
+
+res <- rbind(res, c(M, D))
+rownames(res) <- c("theory", "experiment")
+res
+```
+
+# Задание 4
+
+Доказать, что сумма величин, распределенных по закону Пуассона с параметрами $\alpha_1,\alpha_2,...$, распределена по закону Пуассона, также обосновать это экспериментально.
+
+## Доказательство
+
+Пусть даны две случайные велечины $\mu_1,\mu_2$, распределенные по закону Пуассона с параметрами $\alpha_1,\alpha_2$ соответственно.
+
+Производящая функция случайной величины, распределенной по закону Пуассона (по [лекции 2](https://github.com/junaart/ForStudents/blob/master/KIS/Lection_2/Lection_2.ipynb)):
+$$
+P_\mu(z) = e^{-a(1-z)}
+$$
+Тогда, производящая функция суммы случайных велечин $\mu_1,\mu_2$ (по свойству производящей функции):
+$$
+P_{\mu_1+\mu_2}(z)=e^{-a_1(1-z)}e^{-a_2(1-z)} = e^{-(a_1+a_2)(1-z)}
+$$
+Это выражение является производящей функцией для случайной величины, распределенной по закону Пуассона с параметром $a_1 + a_2$. Используя свойство ассоциативности сложения получаем что сумма произвольного количества cлучайных величин распределенных по закону Пуассона также будет распределена по закону Пуассона.
+
+## Экспериментальное обоснование
+
+Пусть $\mu \sim \text{Pois}(\alpha)$, тогда:
+$$
+M(\mu) = \alpha\\
+D(\mu) = \alpha
+$$
+
+```{r}
+Variant <- 12
+set.seed(Variant)
+k <- 10
+a <- runif(k)
+
+M <- sum(a)
+D <- sum(a)
+
+res <- data.frame(M, D)
+
+n <- 100000
+x <- rpois(n, a[1])
+for (i in 2:k){
+  x <- x + rpois(n, a[i])
+}
+
+M <- mean(x)
+D <- sd(x)^2
+res <- rbind(res, c(M, D))
+rownames(res) <- c("theory", "experiment")
+res
+```
+
+# Задание 5
+
+Серверная станция состоит из двух модулей питания. Время безотказной работы каждого из них распределено по показательному закону с одинаковыми параметрами:
+$$
+f(t) = \lambda e^{-\lambda t}
+$$
+
+$t$ - время работы одного модуля до первого отказа. Второй модуль питания включается сразу же после отказа первого. Определить плотность вероятности времени безотказной работы всей системы, а также математическое ожидание и дисперсию времени безотказной работы.
+
+## Теория
+
+Из [лекции 2](https://github.com/junaart/ForStudents/blob/master/KIS/Lection_2/Lection_2.ipynb):
+
+Если заданы две независимые неотрицательные случайные величины $\zeta_1,\zeta_2$, то функция плотности распределения вероятностей композиции в виде суммы этих случайных величин $\zeta=\zeta_1+\zeta_2$ выразится:
+$$
+f_\zeta = \int_{A(\zeta)}^{B(\zeta)}f_{\zeta_1}(\zeta_1)\cdot f_{\zeta_2}(\zeta-\zeta_1)d\zeta_1
+$$
+
+Пределы интегрирования вычисляются:
+
+$$
+A(\zeta) = a + \frac{\zeta-(a+d)+|\zeta-(a+d)|}{2}\\
+B(\zeta) = b + \frac{\zeta-(b+c)-|\zeta-(b+c)|}{2}\\
+a\leq\zeta_1\leq b, c\leq\zeta_2\leq d
+$$
+
+В нашем случае:
+$$
+\zeta_1\in[0,\infty) \implies a = 0, b = \infty \\
+\zeta_2\in[0,\infty) \implies c = 0, d = \infty \\
+A(\zeta) = \lim_{d\to\infty}{\frac{\zeta-d+|\zeta-d|}{2}} = \lim_{d\to\infty}{\frac{\zeta-d-\zeta+d}{2}} = 0\\
+B(\zeta) = \lim_{b\to\infty}{\left(b +\frac{\zeta-b-|\zeta-b|}{2}\right)} = \lim_{b\to\infty}{\left(b +\frac{\zeta-b+\zeta-b}{2}\right)} = \zeta
+$$
+
+Следовательно:
+$$
+f_\zeta = \int_0^\zeta{\lambda e^{-\lambda t_1} \lambda e^{-\lambda(\zeta-t_1)}dt_1} =
+\lambda^2\int_0^\zeta{e^{-\lambda(t_1+\zeta-t_1)}dt_1} = \lambda^2\int_0^\zeta{e^{-\lambda\zeta}dt_1}=
+\lambda^2e^{-\lambda\zeta}t_1|_{t_1=0}^\zeta = \lambda^2\zeta e^{-\lambda\zeta}\\
+$$
+
+Из лекции:
+$$
+M[\zeta] = \int_0^\infty{tdF(t)} = \lambda^2\int_0^\infty{t^2e^{-\lambda t}dt} = \lambda^2\left[-\frac{t^2e^{-\lambda t}}{\lambda} -
+\frac{2te^{-\lambda t}}{\lambda^2}-\frac{2e^{-\lambda t}}{\lambda^3}\right]_{t=0}^\infty = \lambda^2\cdot\frac{2}{\lambda^3} = \frac{2}{\lambda}\\
+D[\zeta] = \int_0^\infty{(t-M[\zeta])^2dF(t)} = \lambda^2\int_0^\infty{\left(t-\frac{2}{\lambda}\right)^2te^{-\lambda t}dt} = 
+\lambda^2\int_0^\infty{\left(t^3-\frac{4t^2}{\lambda}+\frac{4t}{\lambda^2}\right)e^{-\lambda t}dt} =\\ = 
+\lambda^2\left[-\frac{e^{-\lambda t}}{\lambda}\left(t^3-\frac{4t^2}{\lambda}+\frac{4t}{\lambda^2}\right) - 
+\frac{e^{-\lambda t}}{\lambda^2}\left(3t^2-\frac{8t}{\lambda}+\frac{4}{\lambda^2}\right)
+-\frac{e^{-\lambda t}}{\lambda^3}\left(6t - \frac{8}{\lambda}\right)-6\frac{e^{=\lambda t}}{\lambda^4}\right]_{t=0}^\infty = \\
+= \lambda^2\left(\frac{4}{\lambda^4}-\frac{8}{\lambda^4}+\frac{6}{\lambda^4}\right) = \frac{2\lambda^2}{\lambda^4} = \frac{2}{\lambda^2}
+$$
+
+### Данные варианта
+```{r}
+Variant<-12
+set.seed(Variant)
+alpha<-runif(100)[77]
+alpha
+```
+
+### Теоретический расчет
+```{r}
+M <- 2 / alpha
+D <- 2 / alpha^2
+
+res <- data.frame(M, D)
+res
+```
+
+## Численный расчет
+```{r}
+n <- 100000
+x <- rexp(n, alpha) + rexp(n, alpha)
+
+M <- mean(x)
+D <- sd(x)^2
+res <- rbind(res, c(M, D))
+rownames(res) <- c("theory", "experiment")
+res
+```

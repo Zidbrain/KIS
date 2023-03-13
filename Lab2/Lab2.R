@@ -17,7 +17,7 @@ getValue <- function(X, P) {
   return(res)
 }
 
-Variant<-14
+Variant<-12
 set.seed(Variant) 
 X1<-sample(c(1:20),5)
 X2<-sample(c(3:100),5)
