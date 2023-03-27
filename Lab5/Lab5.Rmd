@@ -1,0 +1,387 @@
+---
+title: "Лабораторная работа 5. Рекомендации по формализации и расчетам характеристик подсистем КИС в виде разомкнутых или замкнутых стохастических моделей"
+output: html_notebook
+---
+
+Кузнецов Григорий ИУ5-83Б
+
+Вариант 12
+
+# Задание
+
+Для одноканальной системы массового обслуживания с ограничением на длину очереди $m$ составьте дифференциальные уравнения для вероятностей нахождения в заданных состояниях в зависимости от времени $t$. Найдите эти вероятности при определенном в соответствии с вариантом значении $t$, а также при $t\to\infty$. Канал иногда может выходить из строя. Заявка, которая обслуживается в момент отказа канала ставится в очередь, если там есть места, в противном случае она покидает систему необслуженной. Входящий поток, поток обслуживания, поток отказов и поток восстановления простейшие с соответствующими интенсивностями 
+$\lambda, \mu, \nu, \gamma$. Количество клиентов, от которых могут поступать заявки на обслуживание $k$. Начальные условия $P_0(0) = 1$.
+
+Найти (теоретически и экспериментально):
+
+- вероятность простоя;
+- вероятность образования очереди;
+- абсолютную пропускную способность;
+- среднюю длину очереди;
+- среднее время нахождения заявок в системе;
+- среднее число заявок в системе.
+- среднее время нахождения в очереди.
+
+# Решение
+
+Определим состояния системы:
+
+- $S_0$ - канал свободен, очередь пуста,
+- $S_1$ - канал занят, очередь пуста,
+- $S_i,\quad i \leq m+1$ - канал занят, очередь содержит $i - 1$ заявку,
+- $S_{0s}$ - канал вышел из строя, очередь пуста,
+- $S_{is}\quad i\leq m$ - канал вышел из строя, в очереди $i$ заявок
+
+![](graf.png)
+
+## Задание варианта
+
+```{r}
+Variant<-12
+set.seed(Variant) 
+m<-sample(c(4:18),1)
+mu<-runif(1)
+lambda<-runif(1)
+if (lambda>mu)
+  {current<-lambda; 
+   lambda<-mu; 
+   mu<-current}
+gamma<-runif(1)
+nu<-runif(1)
+if (gamma<nu)
+  {current<-nu; 
+   nu<-gamma; 
+   gamma<-current}
+if (sample(c(0:1),1)) 
+{k<-sample(c(4:7),1)} else {k<-"inf"}
+t<-runif(1)
+data.frame(lambda, mu, nu, gamma, k, m, t)
+```
+
+## Теоретическое решение
+
+Составим уравнения колмогорова:
+
+$$
+\frac{dP_0(t)}{dt} = \gamma P_{0s}(t) + \mu P_1(t) - (k\lambda+\nu) P_0(t)\\
+\frac{dP_1(t)}{dt} = \gamma P_{1s}(t) + \mu P_2(t) + k\lambda P_0(t)- (k\lambda+\nu + \mu) P_1(t)\\
+\frac{dP_2(t)}{dt} = \gamma P_{2s}(t) + \mu P_3(t) + k\lambda P_1(t)- (k\lambda+\nu + \mu) P_2(t)\\
+\frac{dP_3(t)}{dt} = \gamma P_{3s}(t) + \mu P_4(t) + k\lambda P_2(t)- (k\lambda+\nu + \mu) P_3(t)\\
+\frac{dP_4(t)}{dt} = \gamma P_{4s}(t) + \mu P_5(t) + k\lambda P_3(t)- (k\lambda+\nu + \mu) P_4(t)\\
+\frac{dP_5(t)}{dt} = \gamma P_{5s}(t) + \mu P_6(t) + k\lambda P_4(t)- (k\lambda+\nu + \mu) P_5(t)\\
+\frac{dP_6(t)}{dt} = k\lambda P_5(t) - (\mu+\nu) P_6(t)\\
+\frac{dP_{0s}(t)}{dt} = \nu P_0(t) - (\gamma + k\lambda)P_{0s}(t)\\
+\frac{dP_{1s}(t)}{dt} = \nu P_1(t) + k\lambda P_{0s}(t)- (\gamma + k\lambda)P_{1s}(t)\\
+\frac{dP_{2s}(t)}{dt} = \nu P_2(t) + k\lambda P_{1s}(t)- (\gamma + k\lambda)P_{2s}(t)\\
+\frac{dP_{3s}(t)}{dt} = \nu P_3(t) + k\lambda P_{2s}(t)- (\gamma + k\lambda)P_{3s}(t)\\
+\frac{dP_{4s}(t)}{dt} = \nu P_4(t) + k\lambda P_{3s}(t)- (\gamma + k\lambda)P_{4s}(t)\\
+\frac{dP_{5s}(t)}{dt} = \nu P_5(t) + k\lambda P_{4s}(t) + \nu P_6(t)- \gamma P_{5s}(t)\\
+$$
+При $t=0.6416654$ решим систему дифференциальных уравнений численно методом Рунге-Кутта:
+```{maxima}
+k:4$ lambda:0.817752$ nu: 0.1693481$ gamma:0.2693819$ mu:0.9426217$t_last:0.6416654$
+/* Решаем систему линейных дифференциальных уравнений */
+sol: rk([gamma*P0s+mu*P1-(k*lambda+nu)*P0,
+        gamma*P1s+mu*P2+k*lambda*P0-(k*lambda+nu+mu)*P1,
+        gamma*P2s+mu*P3+k*lambda*P1-(k*lambda+nu+mu)*P2,
+        gamma*P3s+mu*P4+k*lambda*P2-(k*lambda+nu+mu)*P3,
+        gamma*P4s+mu*P5+k*lambda*P3-(k*lambda+nu+mu)*P4,
+        gamma*P5s+mu*P6+k*lambda*P4-(k*lambda+nu+mu)*P5,
+        k*lambda*P5-(mu+nu)*P6,
+        nu*P0-(gamma+k*lambda)*P0s,
+        nu*P1+k*lambda*P0s-(gamma+k*lambda)*P1s,
+        nu*P2+k*lambda*P1s-(gamma+k*lambda)*P2s,
+        nu*P3+k*lambda*P2s-(gamma+k*lambda)*P3s,
+        nu*P4+k*lambda*P3s-(gamma+k*lambda)*P4s,
+        nu*P5+k*lambda*P4s+nu*P6-gamma*P5s],
+    [P0,P1,P2,P3,P4,P5,P6,P0s,P1s,P2s,P3s,P4s,P5s], 
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [t, 0, t_last, 0.01])$
+sol[length(sol)];
+```
+$$
+[0.6416654,0.1812167995335987,0.2542253067083137,0.2219193746537986,0.1395540583185756,0.0683167179967605,0.02756764535955394,0.01249108766990963,0.01403913745051504,0.0256257076090982,0.02490973134375937,0.01660382080413246,0.008426479765771199,0.005104132786212937]
+$$
+
+Получаем:
+
+```{r}
+P_t <- c(0.1812167995335987,0.2542253067083137,0.2219193746537986,0.1395540583185756,0.0683167179967605,0.02756764535955394,0.01249108766990963)
+Ps_t <- c(0.01403913745051504,0.0256257076090982,0.02490973134375937,0.01660382080413246,0.008426479765771199,0.005104132786212937)
+
+for (i in 0:6) {
+  cat("P", i, " = ", P_t[i + 1], "\n", sep="")
+}
+for (i in 0:5) {
+  cat("Ps", i, " = ", Ps_t[i + 1], "\n", sep="")
+}
+
+sum(P_t) + sum(Ps_t)
+```
+
+При $t\to\infty$ приравняем производные нулю:
+
+```{maxima}
+res: solve([gamma*P0s+mu*P1-(k*lambda+nu)*P0=0,
+        gamma*P1s+mu*P2+k*lambda*P0-(k*lambda+nu+mu)*P1=0,
+        gamma*P2s+mu*P3+k*lambda*P1-(k*lambda+nu+mu)*P2=0,
+        gamma*P3s+mu*P4+k*lambda*P2-(k*lambda+nu+mu)*P3=0,
+        gamma*P4s+mu*P5+k*lambda*P3-(k*lambda+nu+mu)*P4=0,
+        gamma*P5s+mu*P6+k*lambda*P4-(k*lambda+nu+mu)*P5=0,
+        k*lambda*P5-(mu+nu)*P6=0,
+        nu*P0-(gamma+k*lambda)*P0s=0,
+        nu*P1+k*lambda*P0s-(gamma+k*lambda)*P1s=0,
+        nu*P2+k*lambda*P1s-(gamma+k*lambda)*P2s=0,
+        nu*P3+k*lambda*P2s-(gamma+k*lambda)*P3s=0,
+        nu*P4+k*lambda*P3s-(gamma+k*lambda)*P4s=0,
+        nu*P5+k*lambda*P4s + nu*P6-gamma*P5s=0,
+        P0 + P1 + P2 + P3 + P4 + P5 + P6 + P0s + P1s + P2s + P3s + P4s + P5s = 1],
+    [P0,P1,P2,P3,P4,P5,P6,P0s,P1s,P2s,P3s,P4s,P5s]);
+float(res);
+```
+
+$$
+\left[ \left[ P_{0}=2.118349346185104 \times 10^{-4} , P_{1}=
+ 7.702538921621934 \times 10^{-4} , P_{2}=0.002833209794113553 , 
+ P_{3}=0.0104499844625075 , P_{4}=0.03856859198726645 , P_{5}=
+ 0.142369884168118 , P_{6}=0.4188000699955948 , {\it P0s}=
+ 1.013273811770533 \times 10^{-5} , {\it P1s}=
+ 4.620544776726186 \times 10^{-5} , {\it P2s}=
+ 1.782111865206759 \times 10^{-4} , {\it P3s}=
+ 6.645073839335577 \times 10^{-4} , {\it P4s}=0.002458804534953773 , 
+ {\it P5s}=0.382638309474326 \right]  \right] 
+$$
+
+Получаем:
+```{r}
+P <- c(2.118349346185104*10^-4,7.702538921621934*10^-4,0.002833209794113553,0.0104499844625075,0.03856859198726645,0.142369884168118,0.4188000699955948)
+Ps <- c(1.013273811770533*10^-5,4.620544776726186*10^-5,1.782111865206759*10^-4,6.645073839335577*10^-4,0.002458804534953773,0.382638309474326)
+
+for (i in 0:6) {
+  cat("P", i, " = ", P[i + 1], "\n", sep="")
+}
+for (i in 0:5) {
+  cat("Ps", i, " = ", Ps[i + 1], "\n", sep="")
+}
+
+sum(P) + sum(Ps)
+```
+
+Найдем значения:
+- *вероятность простоя*:
+$$
+P_0 = 0.0002118349
+$$
+- *вероятность образования очереди*:
+$$
+P_q = \sum_{i=2}^{m+1}P_i + \sum_{i=1}^mP_{is}
+$$
+
+```{r}
+Pq <- sum(P[3:m+2]) + sum(Ps[2:m+1])
+Pq
+```
+
+
+- *абсолютную пропускную способность*:
+$$
+P_{отк} = P_{m+1} + P_{ms}\\
+\lambda' = (1-P_{отк})\lambda k = (1 - P_6 - P_{5s})\lambda k
+$$
+
+```{r}
+a_new <- (1 - P[7] - Ps[6]) * lambda * k
+a_new
+```
+
+- *среднюю длину очереди*:
+$$
+L_{оч} = \sum_{i=2}^{m+1}(i-1)P_i + \sum_{i=1}^{m}iP_{is}
+$$
+
+```{r}
+Lq <- sum(P[3:(m+2)] * c(1:m)) + sum(Ps[2:(m+1)] * c(1:m))
+Lq
+```
+
+- *среднее число заявок в системе*:
+$$
+L_{сист} = \sum_{i=1}^{m+1}iP_i + \sum_{i=1}^miP_{is}
+$$
+```{r}
+Lsist <- sum(P[2:(m+2)] * c(1:(m+1))) + sum(Ps[2:(m+1)] * c(1:m))
+Lsist
+```
+
+
+- *среднее время нахождения заявок в системе*:
+$$
+T_{сист} = \frac{L_{сист}}{\lambda'}
+$$
+
+```{r}
+Tsist <- Lsist / a_new
+Tsist
+```
+
+
+- *среднее время нахождения в очереди*:
+
+$$
+W_{оч} = \frac{L_{оч}}{\lambda'}
+$$
+
+```{r}
+Wq <- Lq / a_new
+Wq
+```
+
+## Экспериментальная проверка
+```{r echo=TRUE}
+results <- data.frame(P0 = numeric(2), Pq = numeric(2), a_new = numeric(2), Lq = numeric(2), Lsist = numeric(2), Tsist = numeric(2), Wq = numeric(2))
+results[1, ] <- c(P[1], Pq, a_new, Lq, Lsist, Tsist, Wq)
+colnames(results) <- c("вероятность простоя", "вероятность образования очереди", "абсолютная пропускная способность", "средняя длина очереди", 
+                       "среднее число заявок в системе", "среднее время нахождения заявок в системе", "среднее время нахождения в очереди")
+rownames(results) <- c("теория", "эксперимент")
+
+library(methods)
+setClass("request", slots = list(clientId = "numeric"))
+
+setClass("state", slots = list(isBusy = "logical", isBroken = "logical", queue = "list"))
+addToQueue <- function(state, request) {
+  if (length(state@queue) < m)
+    state@queue <- c(state@queue, request)
+  return(state)
+}
+
+setClass("event", slots = list(type = "character", time = "numeric", meta = "ANY"))
+getEventTime <- function(events) {
+  ret <- c()
+  for (i in events) {
+    ret <- c(ret, i@time)
+  }
+  return(ret)
+}
+getAndRemoveNextRequest <- function(events) {
+  for (i in 1:length(events)) {
+    event <- events[[i]]
+    if (event@type == "handleRequest") {
+      events <- events[-i]
+      return(list(event@meta, events)) 
+    }
+  }
+  return(list(NULL, events))
+}
+
+requestsHandled <- 0
+hasOOSEvent <- FALSE
+clientsWaiting <- sample(c(FALSE), k, replace = TRUE)
+events <- c()
+currentTime <- 0
+N <- 100000
+
+state <- new("state", isBusy = FALSE, isBroken = FALSE, queue = list())
+
+createEvent <- function(events, type, time, meta) {
+  return(c(events, new("event", type = type, time = currentTime + time, meta = meta)))
+}
+
+P <- sample(c(0), m + 2, replace = TRUE)
+Ps <- sample(c(0), m + 1, replace = TRUE)
+
+calculateP <- function(state) {
+  iState <- 0
+  isState <- 0
+  if (!state@isBroken && !state@isBusy && length(state@queue) == 0)
+    iState <- 1
+  else if (state@isBusy && !state@isBroken && length(state@queue) == 0)
+    iState <- 2
+  else if (state@isBusy && !state@isBroken && length(state@queue) != 0)
+    iState <- length(state@queue) + 2
+  else if (state@isBroken)
+    isState <- length(state@queue) + 1
+  
+  if (iState != 0) P[iState] <<- P[iState] + 1
+  if (isState != 0) Ps[isState] <<- Ps[isState] + 1
+}
+calculateP(state)
+
+for (i in 1:N) {
+  for (j in 1:length(clientsWaiting)) {
+    if (!clientsWaiting[j]) {
+      events <- createEvent(events, type = "createRequest", time = rexp(1, lambda), meta = new("request", clientId = j))
+      clientsWaiting[j] <- TRUE
+    }
+  }
+  if (!hasOOSEvent) {
+    if (state@isBroken)
+      events <- createEvent(events, type = "restore", time = rexp(1, gamma), meta = NULL)
+    else 
+      events <- createEvent(events, type = "outOfService", time = rexp(1, nu), meta = NULL)
+    hasOOSEvent <- TRUE
+  }
+  
+  events <- events[order(getEventTime(events))]
+  event <- events[[1]]
+  events <- events[-1]
+  currentTime <- event@time
+  
+  if (event@type == "createRequest") {
+    clientsWaiting[event@meta@clientId] <- FALSE
+   
+    
+    if (state@isBusy || state@isBroken) {
+      state <- addToQueue(state, event@meta)
+    }
+    else {
+      state@isBusy <- TRUE
+      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu), meta = event@meta)
+    }
+  }
+  else if (event@type == "handleRequest") {
+    if (length(state@queue) == 0) {
+      state@isBusy <- FALSE
+    }
+    else {
+      request <- state@queue[[1]]
+      state@queue <- state@queue[-1]
+      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu), meta = request)
+    }
+    requestsHandled <- requestsHandled + 1
+  }
+  else if (event@type == "outOfService") {
+    state@isBroken <- TRUE
+    hasOOSEvent <- FALSE
+    if (state@isBusy) {
+      res <- getAndRemoveNextRequest(events)
+      events <- res[[2]]
+      if (!is.null(res[[1]]))
+        state <- addToQueue(state, res[[1]])
+      state@isBusy <- FALSE
+    }
+  }
+  else if (event@type == "restore") {
+    state@isBroken <- FALSE
+    hasOOSEvent <- FALSE
+    if (length(state@queue) != 0) {
+      request <- state@queue[[1]]
+      state@queue <- state@queue[-1]
+      state@isBusy <- TRUE
+      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu), meta = request)
+    }
+    else state@isBusy <- FALSE
+  }
+  
+  calculateP(state)
+}
+
+P <- P / (N + 1)
+Ps <- Ps / (N + 1)
+Lq <- sum(P[3:(m+2)] * c(1:m)) + sum(Ps[2:(m+1)] * c(1:m))
+Lsist <- sum(P[2:(m+2)] * c(1:(m+1))) + sum(Ps[2:(m+1)] * c(1:m))
+a_new <- requestsHandled / currentTime
+
+results[2,] <- c(P[1], 1 - P[1] - P[2] - Ps[1], a_new, Lq, Lsist, Lsist / a_new, Lq / a_new)
+results  
+```
+
