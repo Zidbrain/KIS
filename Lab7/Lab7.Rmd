@@ -114,24 +114,6 @@ mean(completionTime)
 
 # Алгоритм SPT
 
-Среднее время обслуживания:
-$$
-T_{сист} = \frac{1}{m}\sum_{i=1}^m \sum_{j=1}^i Q_j, \quad где\space Q_i \geq Q_j, \forall i>j
-$$
-
-```{r}
-T_syst <- 0
-sortedQ <- Q[order(Q)]
-for (i in 1:m) {
-  for (j in 1:i) {
-    T_syst <- T_syst + sortedQ[j]
-  }
-}
-T_syst <- T_syst / m
-T_syst
-```
-
-Проверим экспериментально:
 ```{r}
 events <- c()
 currentTime <- 0
@@ -196,13 +178,13 @@ events <- c()
 currentTime <- 0
 N <- 10000
 
-setClass("event", slots = list(type = "character", time = "numeric", creationTime = "numeric", timeLeft = "numeric"))
-createEvent <- function(events, type, time, creationTime, checkQ = TRUE) {
+setClass("event", slots = list(type = "character", time = "numeric", creationTime = "numeric", timeLeft = "numeric", realCreationTime = "numeric"))
+createEvent <- function(events, type, time, creationTime, realCreationTime, checkQ = TRUE) {
   endTime <- currentTime + time
   if (checkQ && time > q) endTime <- currentTime + q
-  return(c(events, new("event", type = type, time = endTime, creationTime = creationTime, timeLeft = time)))
+  return(c(events, new("event", type = type, time = endTime, creationTime = creationTime, timeLeft = time, realCreationTime = realCreationTime)))
 }
-setClass("request", slots = list(creationTime = "numeric", timeLeft = "numeric"))
+setClass("request", slots = list(creationTime = "numeric", timeLeft = "numeric", realCreationTime = "numeric"))
 
 state <- new("state", isBusy = FALSE, queue = list())
 
@@ -217,7 +199,7 @@ for (i in 1:N) {
     }
   }
   if (!hasRequest)
-    events <- createEvent(events, "requestCreated", rexp(1, newLambda), currentTime, FALSE)
+    events <- createEvent(events, "requestCreated", rexp(1, newLambda), currentTime, currentTime, FALSE)
   
   events <- events[order(getEventTime(events))]
   event <- events[[1]]
@@ -226,23 +208,31 @@ for (i in 1:N) {
   
   if (event@type == "requestCreated") {
     if (state@isBusy)
-      state <- addToQueue(state, new("request", creationTime = currentTime, timeLeft = rexp(1, mu)))
+      state <- addToQueue(state, new("request", creationTime = currentTime, timeLeft = rexp(1, mu), realCreationTime = currentTime))
     else {
       state@isBusy <- TRUE
-      events <- createEvent(events, "requestHandled", rexp(1, mu), currentTime)
+      events <- createEvent(events, "requestHandled", rexp(1, mu), currentTime, currentTime)
     }
   }
   else if (event@type == "requestHandled") {
     event@timeLeft <- event@timeLeft - (currentTime - event@creationTime)
-    if (event@timeLeft > 0) {
-      events <- createEvent(events, "requestHandled", event@timeLeft, event@creationTime)
-    }
-    else {
-      completionTime <- c(completionTime, currentTime - event@creationTime)
+    if (event@timeLeft > 0.01) {
       if (length(state@queue) > 0) {
         request <- state@queue[[1]]
         state@queue <- state@queue[-1]
-        events <- createEvent(events, "requestHandled", rexp(1, mu), request@timeLeft)
+        events <- createEvent(events, "requestHandled", request@timeLeft, currentTime, request@realCreationTime)
+      }
+      else {
+        state@isBusy <- FALSE
+      }
+      state <- addToQueue(state, new("request", creationTime = currentTime, timeLeft = event@timeLeft, realCreationTime = event@realCreationTime))
+    }
+    else {
+      completionTime <- c(completionTime, currentTime - event@realCreationTime)
+      if (length(state@queue) > 0) {
+        request <- state@queue[[1]]
+        state@queue <- state@queue[-1]
+        events <- createEvent(events, "requestHandled", request@timeLeft, currentTime, request@realCreationTime)
       }
       else
         state@isBusy <- FALSE
@@ -253,3 +243,8 @@ for (i in 1:N) {
 mean(completionTime)
 ```
 
+Получаем следующие результаты:
+
+| Случайная величина | SPT      | RR (q = 3)|
+|:------------------:|:--------:|:---------:|
+| 16.89376           | 15.33672 | 25.26929  |

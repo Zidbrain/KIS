@@ -26,11 +26,11 @@ $\lambda, \mu, \nu, \gamma$. Количество клиентов, от кот�
 
 Определим состояния системы:
 
-- $S_0$ - канал свободен, очередь пуста,
-- $S_1$ - канал занят, очередь пуста,
-- $S_i,\quad i \leq m+1$ - канал занят, очередь содержит $i - 1$ заявку,
-- $S_{0s}$ - канал вышел из строя, очередь пуста,
-- $S_{is}\quad i\leq m$ - канал вышел из строя, в очереди $i$ заявок
+-   $S_0$ - канал свободен, очередь пуста, канал без отказов;
+-   $S_1$ - канал занят, очередь пуста, канал без отказов;
+-   $S_i, \; i \le k$ - канал занят, очередь состоит из $i-1$ заявки, канал без отказов;
+-   $S_0$ - очередь пуста, канал не работает;
+-   $S_is, \; i \le k$ - очередь состоит из $i$ заявок, канал не работает.
 
 ![](graf.png)
 
@@ -63,56 +63,50 @@ data.frame(lambda, mu, nu, gamma, k, m, t)
 Составим уравнения колмогорова:
 
 $$
-\frac{dP_0(t)}{dt} = \gamma P_{0s}(t) + \mu P_1(t) - (k\lambda+\nu) P_0(t)\\
-\frac{dP_1(t)}{dt} = \gamma P_{1s}(t) + \mu P_2(t) + k\lambda P_0(t)- (k\lambda+\nu + \mu) P_1(t)\\
-\frac{dP_2(t)}{dt} = \gamma P_{2s}(t) + \mu P_3(t) + k\lambda P_1(t)- (k\lambda+\nu + \mu) P_2(t)\\
-\frac{dP_3(t)}{dt} = \gamma P_{3s}(t) + \mu P_4(t) + k\lambda P_2(t)- (k\lambda+\nu + \mu) P_3(t)\\
-\frac{dP_4(t)}{dt} = \gamma P_{4s}(t) + \mu P_5(t) + k\lambda P_3(t)- (k\lambda+\nu + \mu) P_4(t)\\
-\frac{dP_5(t)}{dt} = \gamma P_{5s}(t) + \mu P_6(t) + k\lambda P_4(t)- (k\lambda+\nu + \mu) P_5(t)\\
-\frac{dP_6(t)}{dt} = k\lambda P_5(t) - (\mu+\nu) P_6(t)\\
-\frac{dP_{0s}(t)}{dt} = \nu P_0(t) - (\gamma + k\lambda)P_{0s}(t)\\
-\frac{dP_{1s}(t)}{dt} = \nu P_1(t) + k\lambda P_{0s}(t)- (\gamma + k\lambda)P_{1s}(t)\\
-\frac{dP_{2s}(t)}{dt} = \nu P_2(t) + k\lambda P_{1s}(t)- (\gamma + k\lambda)P_{2s}(t)\\
-\frac{dP_{3s}(t)}{dt} = \nu P_3(t) + k\lambda P_{2s}(t)- (\gamma + k\lambda)P_{3s}(t)\\
-\frac{dP_{4s}(t)}{dt} = \nu P_4(t) + k\lambda P_{3s}(t)- (\gamma + k\lambda)P_{4s}(t)\\
-\frac{dP_{5s}(t)}{dt} = \nu P_5(t) + k\lambda P_{4s}(t) + \nu P_6(t)- \gamma P_{5s}(t)\\
+\frac{dP_0(t)}{dt} = \gamma P_{0s}(t) + \mu P_1(t) - (4\lambda+\nu) P_0(t)\\
+\frac{dP_1(t)}{dt} = \gamma P_{1s}(t) + \mu P_2(t) + 4\lambda P_0(t)- (3\lambda+\nu + \mu) P_1(t)\\
+\frac{dP_2(t)}{dt} = \gamma P_{2s}(t) + \mu P_3(t) + 3\lambda P_1(t)- (2\lambda+\nu + \mu) P_2(t)\\
+\frac{dP_3(t)}{dt} = \gamma P_{3s}(t) + \mu P_4(t) + 2\lambda P_2(t)- (\lambda+\nu + \mu) P_3(t)\\
+\frac{dP_4(t)}{dt} = \gamma P_{4s}(t) + \lambda P_3(t) - (\nu + \mu) P_4(t)\\
+\frac{dP_{0s}(t)}{dt} = \nu P_0(t) - (\gamma + 4\lambda)P_{0s}(t)\\
+\frac{dP_{1s}(t)}{dt} = \nu P_1(t) + 4\lambda P_{0s}(t)- (\gamma + 3\lambda)P_{1s}(t)\\
+\frac{dP_{2s}(t)}{dt} = \nu P_2(t) + 3\lambda P_{1s}(t)- (\gamma + 2\lambda)P_{2s}(t)\\
+\frac{dP_{3s}(t)}{dt} = \nu P_3(t) + 2\lambda P_{2s}(t)- (\gamma + \lambda)P_{3s}(t)\\
+\frac{dP_{4s}(t)}{dt} = \nu P_4(t) + \lambda P_{3s}(t)- \gamma P_{4s}(t)\\
 $$
 При $t=0.6416654$ решим систему дифференциальных уравнений численно методом Рунге-Кутта:
 ```{maxima}
-k:4$ lambda:0.817752$ nu: 0.1693481$ gamma:0.2693819$ mu:0.9426217$t_last:0.6416654$
+lambda:0.817752$ nu: 0.1693481$ gamma:0.2693819$ mu:0.9426217$t_last:0.6416654$
 /* Решаем систему линейных дифференциальных уравнений */
-sol: rk([gamma*P0s+mu*P1-(k*lambda+nu)*P0,
-        gamma*P1s+mu*P2+k*lambda*P0-(k*lambda+nu+mu)*P1,
-        gamma*P2s+mu*P3+k*lambda*P1-(k*lambda+nu+mu)*P2,
-        gamma*P3s+mu*P4+k*lambda*P2-(k*lambda+nu+mu)*P3,
-        gamma*P4s+mu*P5+k*lambda*P3-(k*lambda+nu+mu)*P4,
-        gamma*P5s+mu*P6+k*lambda*P4-(k*lambda+nu+mu)*P5,
-        k*lambda*P5-(mu+nu)*P6,
-        nu*P0-(gamma+k*lambda)*P0s,
-        nu*P1+k*lambda*P0s-(gamma+k*lambda)*P1s,
-        nu*P2+k*lambda*P1s-(gamma+k*lambda)*P2s,
-        nu*P3+k*lambda*P2s-(gamma+k*lambda)*P3s,
-        nu*P4+k*lambda*P3s-(gamma+k*lambda)*P4s,
-        nu*P5+k*lambda*P4s+nu*P6-gamma*P5s],
-    [P0,P1,P2,P3,P4,P5,P6,P0s,P1s,P2s,P3s,P4s,P5s], 
-    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+sol: rk([gamma*P0s+mu*P1-(4*lambda+nu)*P0,
+        gamma*P1s+mu*P2+4*lambda*P0-(3*lambda+nu+mu)*P1,
+        gamma*P2s+mu*P3+3*lambda*P1-(2*lambda+nu+mu)*P2,
+        gamma*P3s+mu*P4+2*lambda*P2-(1*lambda+nu+mu)*P3,
+        gamma*P4s+lambda*P3-(nu+mu)*P4,
+        nu*P0-(gamma+4*lambda)*P0s,
+        nu*P1+4*lambda*P0s-(gamma+3*lambda)*P1s,
+        nu*P2+3*lambda*P1s-(gamma+2*lambda)*P2s,
+        nu*P3+2*lambda*P2s-(gamma+1*lambda)*P3s,
+        nu*P4+1*lambda*P3s-gamma*P4s],
+    [P0,P1,P2,P3,P4,P0s,P1s,P2s,P3s,P4s], 
+    [1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
     [t, 0, t_last, 0.01])$
 sol[length(sol)];
 ```
 $$
-[0.6416654,0.1812167995335987,0.2542253067083137,0.2219193746537986,0.1395540583185756,0.0683167179967605,0.02756764535955394,0.01249108766990963,0.01403913745051504,0.0256257076090982,0.02490973134375937,0.01660382080413246,0.008426479765771199,0.005104132786212937]
+[0.193692454724046,0.3232060323204519,0.2649691290160426,0.1065700645010788,0.01685330967889163,0.01435802146523582,0.0331850482377551,0.03130057258758854,0.01360580669359686,0.002259560775312891]
 $$
 
 Получаем:
 
 ```{r}
-P_t <- c(0.1812167995335987,0.2542253067083137,0.2219193746537986,0.1395540583185756,0.0683167179967605,0.02756764535955394,0.01249108766990963)
-Ps_t <- c(0.01403913745051504,0.0256257076090982,0.02490973134375937,0.01660382080413246,0.008426479765771199,0.005104132786212937)
+P_t <- c(0.193692454724046,0.3232060323204519,0.2649691290160426,0.1065700645010788,0.01685330967889163)
+Ps_t <- c(0.01435802146523582,0.0331850482377551,0.03130057258758854,0.01360580669359686,0.002259560775312891)
 
-for (i in 0:6) {
+for (i in 0:4) {
   cat("P", i, " = ", P_t[i + 1], "\n", sep="")
 }
-for (i in 0:5) {
+for (i in 0:4) {
   cat("Ps", i, " = ", Ps_t[i + 1], "\n", sep="")
 }
 
@@ -122,45 +116,38 @@ sum(P_t) + sum(Ps_t)
 При $t\to\infty$ приравняем производные нулю:
 
 ```{maxima}
-res: solve([gamma*P0s+mu*P1-(k*lambda+nu)*P0=0,
-        gamma*P1s+mu*P2+k*lambda*P0-(k*lambda+nu+mu)*P1=0,
-        gamma*P2s+mu*P3+k*lambda*P1-(k*lambda+nu+mu)*P2=0,
-        gamma*P3s+mu*P4+k*lambda*P2-(k*lambda+nu+mu)*P3=0,
-        gamma*P4s+mu*P5+k*lambda*P3-(k*lambda+nu+mu)*P4=0,
-        gamma*P5s+mu*P6+k*lambda*P4-(k*lambda+nu+mu)*P5=0,
-        k*lambda*P5-(mu+nu)*P6=0,
-        nu*P0-(gamma+k*lambda)*P0s=0,
-        nu*P1+k*lambda*P0s-(gamma+k*lambda)*P1s=0,
-        nu*P2+k*lambda*P1s-(gamma+k*lambda)*P2s=0,
-        nu*P3+k*lambda*P2s-(gamma+k*lambda)*P3s=0,
-        nu*P4+k*lambda*P3s-(gamma+k*lambda)*P4s=0,
-        nu*P5+k*lambda*P4s + nu*P6-gamma*P5s=0,
-        P0 + P1 + P2 + P3 + P4 + P5 + P6 + P0s + P1s + P2s + P3s + P4s + P5s = 1],
-    [P0,P1,P2,P3,P4,P5,P6,P0s,P1s,P2s,P3s,P4s,P5s]);
+res: solve([gamma*P0s+mu*P1-(4*lambda+nu)*P0=0,
+        gamma*P1s+mu*P2+4*lambda*P0-(3*lambda+nu+mu)*P1=0,
+        gamma*P2s+mu*P3+3*lambda*P1-(2*lambda+nu+mu)*P2=0,
+        gamma*P3s+mu*P4+2*lambda*P2-(1*lambda+nu+mu)*P3=0,
+        gamma*P4s+lambda*P3-(nu+mu)*P4=0,
+        nu*P0-(gamma+4*lambda)*P0s=0,
+        nu*P1+4*lambda*P0s-(gamma+3*lambda)*P1s=0,
+        nu*P2+3*lambda*P1s-(gamma+2*lambda)*P2s=0,
+        P0 + P1 + P2 + P3 + P4 + P0s + P1s + P2s + P3s + P4s = 1,
+        nu*P4+1*lambda*P3s-gamma*P4s=0],
+    [P0,P1,P2,P3,P4,P0s,P1s,P2s,P3s,P4s]);
 float(res);
 ```
 
 $$
-\left[ \left[ P_{0}=2.118349346185104 \times 10^{-4} , P_{1}=
- 7.702538921621934 \times 10^{-4} , P_{2}=0.002833209794113553 , 
- P_{3}=0.0104499844625075 , P_{4}=0.03856859198726645 , P_{5}=
- 0.142369884168118 , P_{6}=0.4188000699955948 , {\it P0s}=
- 1.013273811770533 \times 10^{-5} , {\it P1s}=
- 4.620544776726186 \times 10^{-5} , {\it P2s}=
- 1.782111865206759 \times 10^{-4} , {\it P3s}=
- 6.645073839335577 \times 10^{-4} , {\it P4s}=0.002458804534953773 , 
- {\it P5s}=0.382638309474326 \right]  \right] 
+\left[ \left[ P_{0}=0.01089314164754021 , P_{1}=0.03960859792556032
+  , P_{2}=0.1111259635473251 , P_{3}=0.2168552227300658 , P_{4}=
+ 0.2355209033838897 , {\it P0s}=5.210535825564875 \times 10^{-4} , 
+ {\it P1s}=0.00308965479373093 , {\it P2s}=0.01385840745005143 , 
+ {\it P3s}=0.05462942583485104 , {\it P4s}=0.313897629104429 \right] 
+  \right] 
 $$
 
 Получаем:
 ```{r}
-P <- c(2.118349346185104*10^-4,7.702538921621934*10^-4,0.002833209794113553,0.0104499844625075,0.03856859198726645,0.142369884168118,0.4188000699955948)
-Ps <- c(1.013273811770533*10^-5,4.620544776726186*10^-5,1.782111865206759*10^-4,6.645073839335577*10^-4,0.002458804534953773,0.382638309474326)
+P <- c(0.01089314164754021,0.03960859792556032,0.1111259635473251,0.2168552227300658,0.2355209033838897)
+Ps <- c(5.210535825564875*10^-4,0.00308965479373093,0.01385840745005143,0.05462942583485104,0.313897629104429)
 
-for (i in 0:6) {
+for (i in 0:4) {
   cat("P", i, " = ", P[i + 1], "\n", sep="")
 }
-for (i in 0:5) {
+for (i in 0:4) {
   cat("Ps", i, " = ", Ps[i + 1], "\n", sep="")
 }
 
@@ -170,46 +157,47 @@ sum(P) + sum(Ps)
 Найдем значения:
 - *вероятность простоя*:
 $$
-P_0 = 0.0002118349
+P_0 = 0.01089314
 $$
 - *вероятность образования очереди*:
 $$
-P_q = \sum_{i=2}^{m+1}P_i + \sum_{i=1}^mP_{is}
+P_q = 1 - P_0
 $$
 
 ```{r}
-Pq <- sum(P[3:m+2]) + sum(Ps[2:m+1])
+Pq <- 1 - P[1]
 Pq
 ```
 
 
 - *абсолютную пропускную способность*:
 $$
-P_{отк} = P_{m+1} + P_{ms}\\
-\lambda' = (1-P_{отк})\lambda k = (1 - P_6 - P_{5s})\lambda k
+L_{зан} = 1 - P_0 - \sum_{i=0}^k P_{is}\\
+\lambda' = L_{зан} \cdot \mu
 $$
 
 ```{r}
-a_new <- (1 - P[7] - Ps[6]) * lambda * k
+a_new <- (1 - P[1] - sum(Ps[1:5])) * mu
 a_new
 ```
 
 - *среднюю длину очереди*:
 $$
-L_{оч} = \sum_{i=2}^{m+1}(i-1)P_i + \sum_{i=1}^{m}iP_{is}
+L_{оч} = \sum_{i=2}^{k}(i-1)P_i + \sum_{i=1}^{k}iP_{is}
 $$
 
 ```{r}
-Lq <- sum(P[3:(m+2)] * c(1:m)) + sum(Ps[2:(m+1)] * c(1:m))
+Lq <- sum(P[3:(k+1)] * c(1:(k-1))) + sum(Ps[2:(k+1)] * c(1:k))
 Lq
 ```
 
 - *среднее число заявок в системе*:
 $$
-L_{сист} = \sum_{i=1}^{m+1}iP_i + \sum_{i=1}^miP_{is}
+L_{сист} = \sum_{i=1}^{k}iP_i + \sum_{i=1}^{k}i P_{is}
 $$
+
 ```{r}
-Lsist <- sum(P[2:(m+2)] * c(1:(m+1))) + sum(Ps[2:(m+1)] * c(1:m))
+Lsist <- sum(P[2:(k+1)] * c(1:k)) + sum(Ps[2:(k+1)] * c(1:k))
 Lsist
 ```
 
@@ -245,16 +233,14 @@ colnames(results) <- c("вероятность простоя", "вероятн�
 rownames(results) <- c("теория", "эксперимент")
 
 library(methods)
-setClass("request", slots = list(clientId = "numeric"))
 
-setClass("state", slots = list(isBusy = "logical", isBroken = "logical", queue = "list"))
-addToQueue <- function(state, request) {
-  if (length(state@queue) < m)
-    state@queue <- c(state@queue, request)
+setClass("state", slots = list(isBusy = "logical", isBroken = "logical", queue = "numeric"))
+addToQueue <- function(state) {
+  state@queue <- state@queue + 1
   return(state)
 }
 
-setClass("event", slots = list(type = "character", time = "numeric", meta = "ANY"))
+setClass("event", slots = list(type = "character", time = "numeric"))
 getEventTime <- function(events) {
   ret <- c()
   for (i in events) {
@@ -267,58 +253,49 @@ getAndRemoveNextRequest <- function(events) {
     event <- events[[i]]
     if (event@type == "handleRequest") {
       events <- events[-i]
-      return(list(event@meta, events)) 
+      return(list(events, TRUE)) 
     }
   }
-  return(list(NULL, events))
+  return(list(events, FALSE))
 }
 
 requestsHandled <- 0
-hasOOSEvent <- FALSE
-clientsWaiting <- sample(c(FALSE), k, replace = TRUE)
+clientsFree <- k
 events <- c()
 currentTime <- 0
-N <- 100000
+N <- 50000
 
-state <- new("state", isBusy = FALSE, isBroken = FALSE, queue = list())
+state <- new("state", isBusy = FALSE, isBroken = FALSE, queue = 0)
 
-createEvent <- function(events, type, time, meta) {
-  return(c(events, new("event", type = type, time = currentTime + time, meta = meta)))
+createEvent <- function(events, type, time) {
+  return(c(events, new("event", type = type, time = currentTime + time)))
 }
 
-P <- sample(c(0), m + 2, replace = TRUE)
-Ps <- sample(c(0), m + 1, replace = TRUE)
+P <- sample(c(0), k + 1, replace = TRUE)
+Ps <- sample(c(0), k + 1, replace = TRUE)
 
 calculateP <- function(state) {
   iState <- 0
   isState <- 0
-  if (!state@isBroken && !state@isBusy && length(state@queue) == 0)
+  if (!state@isBroken && !state@isBusy)
     iState <- 1
-  else if (state@isBusy && !state@isBroken && length(state@queue) == 0)
-    iState <- 2
-  else if (state@isBusy && !state@isBroken && length(state@queue) != 0)
-    iState <- length(state@queue) + 2
+  else if (state@isBusy && !state@isBroken)
+    iState <- state@queue + 2
   else if (state@isBroken)
-    isState <- length(state@queue) + 1
+    isState <- state@queue + 1
   
   if (iState != 0) P[iState] <<- P[iState] + 1
   if (isState != 0) Ps[isState] <<- Ps[isState] + 1
 }
 calculateP(state)
+events <- createEvent(events, type = "outOfService", time = rexp(1, nu))
 
 for (i in 1:N) {
-  for (j in 1:length(clientsWaiting)) {
-    if (!clientsWaiting[j]) {
-      events <- createEvent(events, type = "createRequest", time = rexp(1, lambda), meta = new("request", clientId = j))
-      clientsWaiting[j] <- TRUE
+  if (clientsFree != 0) {
+    for (j in 1:clientsFree) {
+      events <- createEvent(events, type = "createRequest", time = rexp(1, lambda))
     }
-  }
-  if (!hasOOSEvent) {
-    if (state@isBroken)
-      events <- createEvent(events, type = "restore", time = rexp(1, gamma), meta = NULL)
-    else 
-      events <- createEvent(events, type = "outOfService", time = rexp(1, nu), meta = NULL)
-    hasOOSEvent <- TRUE
+    clientsFree <- 0
   }
   
   events <- events[order(getEventTime(events))]
@@ -327,49 +304,45 @@ for (i in 1:N) {
   currentTime <- event@time
   
   if (event@type == "createRequest") {
-    clientsWaiting[event@meta@clientId] <- FALSE
-   
-    
     if (state@isBusy || state@isBroken) {
-      state <- addToQueue(state, event@meta)
+      state <- addToQueue(state)
     }
     else {
       state@isBusy <- TRUE
-      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu), meta = event@meta)
+      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu))
     }
   }
   else if (event@type == "handleRequest") {
-    if (length(state@queue) == 0) {
+    clientsFree <- clientsFree + 1
+    if (state@queue == 0) {
       state@isBusy <- FALSE
     }
     else {
-      request <- state@queue[[1]]
-      state@queue <- state@queue[-1]
-      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu), meta = request)
+      state@queue <- state@queue - 1
+      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu))
     }
     requestsHandled <- requestsHandled + 1
   }
   else if (event@type == "outOfService") {
     state@isBroken <- TRUE
-    hasOOSEvent <- FALSE
     if (state@isBusy) {
       res <- getAndRemoveNextRequest(events)
-      events <- res[[2]]
-      if (!is.null(res[[1]]))
-        state <- addToQueue(state, res[[1]])
+      events <- res[[1]]
+      if (res[[2]])
+        state <- addToQueue(state)
       state@isBusy <- FALSE
     }
+    events <- createEvent(events, type = "restore", time = rexp(1, gamma))
   }
   else if (event@type == "restore") {
     state@isBroken <- FALSE
-    hasOOSEvent <- FALSE
-    if (length(state@queue) != 0) {
-      request <- state@queue[[1]]
-      state@queue <- state@queue[-1]
+    if (state@queue != 0) {
+      state@queue <- state@queue - 1
       state@isBusy <- TRUE
-      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu), meta = request)
+      events <- createEvent(events, type = "handleRequest", time = rexp(1, mu))
     }
     else state@isBusy <- FALSE
+    events <- createEvent(events, type = "outOfService", time = rexp(1, nu))
   }
   
   calculateP(state)
@@ -377,11 +350,11 @@ for (i in 1:N) {
 
 P <- P / (N + 1)
 Ps <- Ps / (N + 1)
-Lq <- sum(P[3:(m+2)] * c(1:m)) + sum(Ps[2:(m+1)] * c(1:m))
-Lsist <- sum(P[2:(m+2)] * c(1:(m+1))) + sum(Ps[2:(m+1)] * c(1:m))
+Lq <- sum(P[3:(k+1)] * c(1:(k-1))) + sum(Ps[2:(k+1)] * c(1:k))
+Lsist <- sum(P[2:(k+1)] * c(1:k)) + sum(Ps[2:(k+1)] * c(1:k))
 a_new <- requestsHandled / currentTime
 
-results[2,] <- c(P[1], 1 - P[1] - P[2] - Ps[1], a_new, Lq, Lsist, Lsist / a_new, Lq / a_new)
+results[2,] <- c(P[1], 1 - P[1], a_new, Lq, Lsist, Lsist / a_new, Lq / a_new)
 results  
 ```
 
